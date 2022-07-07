@@ -33,174 +33,98 @@ There are 6 scopes:
 * System: similar to provided but instead of taking it form a remote maven repository, we can set a local path in our computer.
 * Import: it is used in pom based project, not in jar or war
 
-# Multimodule Maven Project
+# Multi Module Maven Project
 
-### In Parent Pom:
 
-```
-    <groupId>com.franklin.product</groupId>
-    <artifactId>productparent</artifactId>
-    <version>1.0</version>
-    <packaging>pom</packaging>
-    <name>productparent</name>
-```
+Go to productmaven directory to see a demo of a multi-module maven project using a parent and children pom.xml files and see different configurations for tools like JaCoCo and Sonar.
 
-Parent POM files should always have <packaging>pom</packaging>, not jar nor war
+> /productmaven
 
-Then add the children as modules:
+# JaCoCo
+
+The JaCoCo core coverage plugin will analyse and see how mucho code, how many classes and methods are being cover by the tests that are run, and it will generate reports.
 
 ```
-     <modules>
-        <module>productservices</module>
-        <module>productweb</module>
-    </modules>
-```
-
-### Change the child POMS
-
-In the child pom, update to use the parent in the Artifact Coordinates section:
-
-- Product Service:
-
-Before:
-
-```
-    <groupId>com.franklin.product</groupId>
-    <artifactId>productservice</artifactId>
-    <version>1.0-SNAPSHOT</version>
-```
-
-After:
-
-```
-    <parent>
-        <groupId>com.franklin.product</groupId>
-        <artifactId>productparent</artifactId>
-        <version>1.0</version>
-    </parent>
-
-    <artifactId>productservice</artifactId> 
-```
-
-- Product Web:
-
-Before:
-
-```
-    <groupId>com.franklin.product</groupId>
-    <artifactId>productweb</artifactId>
-    <version>1.0-SNAPSHOT</version>
-    <packaging>war</packaging>
-```
-
-After:
-
-```
-    <parent>
-        <groupId>com.franklin.product</groupId>
-        <artifactId>productparent</artifactId>
-        <version>1.0</version>
-    </parent>
-    <packaging>war</packaging>
-    <artifactId>productweb</artifactId> 
-```
-
-### To Run the hole project from the Parent Module:
-
-cd to parent directory
-
-```
-mvn clean install
-```
-
-It will build all the projects
-
-### Add a sibiling project as a dependency 
-
-```
-<dependencies>
-    <dependency>
-        <groupId>com.franklin.product</groupId>
-        <artifactId>productservice</artifactId>
-        <version>1.0-SNAPSHOT</version>
-    </dependency>
-</dependencies>
-```
-
-# Manage Dependencies
-
-When we have multiple prujects in our organization, we want to ensure that all these projects are using the same dependencies versions.
-
-E.g: if one project is using junit 3, other 4, and other 5.... it will end up with lots of inconsistency and can be a mess.
-
-We want to make sure that as organization we are using the same version.
-
-Maven makes it sumple simple with us using the Parent pom.xml
-
-* Parent pom.xml (before):
-
-```
-    <dependencies>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.11</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
-```
-
-* Parent pom.xml (after):
-
-```
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>junit</groupId>
-                <artifactId>junit</artifactId>
-                <version>4.11</version>
-                <scope>test</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
-```
-
-After our junit dependency becames a *managed dependency*, meaning we do not have to define de version of it in every child project.
-
-* Child projects pom.xml (after, we can delete the version):
-
-```
-    <dependencies>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
-```
-
-If we define the version again, then it overrides the parent version, wich is not a common practice
-
-# Plugin Managment
-
-Similar idea of dependency management, but we plugins we want touse in our projects
-
-* Parent pom.xml:
-
-```
-    <build>
+<build>
         <pluginManagement>
+            <!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
             <plugins>
                 <plugin>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.8.0</version>
-                    <configuration>
-                        <source>1.8</source>
-                        <target>1.8</target>
-                    </configuration>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>0.8.7</version>
+
+                    <!-- step 1: initialization step, ready to generate reports-->
+                    <executions>
+                        <execution>
+                            <!-- goals we want to run from this plugin -->
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>generatereport</id>
+                            <!-- at which phase we want to run int -->
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
-    </build>
+</build>
+        
+```
+
+Now run:
+
+```
+mvn clean test
+```
+
+or
+
+```
+mvn clean verify
+```
+
+See in the maven logs that a jacoco task is running.
+
+**Go to ./target/site/jacoco/index.html to display the analysis graphics and report made by Jacoco.**
+
+We can see how much of code is covered with Unit Test
+
+# SonarQube
+
+It is a static code analizer, that generates beautiful dashboards with everything related with our projects, if there are any code smells.
+
+Both are easy to integrate with maven.
+
+
+Download sonarqube community edition
+
+```
+cd /Users/franklinvelasquezfuentes/Downloads/sonarqube-9.5.0.56709/bin/macosx-universal-64
+
+./sonar.sh      // for intructions
+
+./sonar.sh start
+
+./sonar.sh status
+
+./sonar.sh console
+```
+
+Go to localhost:9000  , default credentials: admin, admin
+
+Create a settings.xml in your .m2 local repository
+
+Go to Sonarqube dashboard an generate a new user token
+
+Then run :
+
+```
+mvn clean verify sonar:sonar -Dsonar.login=squ_27e1abdf24c1cf23e03e4240ee955bb85187d4a1
 ```
